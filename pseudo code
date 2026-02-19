@@ -1,0 +1,191 @@
+src/params.py
+Parameter defaults for Disk Physics + Stokes Number stage.
+We use CGS units internally:
+- length: cm
+- mass: g
+- time: s
+- temperature: K
+- surface density: g/cm^2
+- volume density: g/cm^3
+
+from dataclasses import dataclass
+import math
+
+# ---------- Physical constants (CGS) ----------
+G_CGS = 6.67430e-8         # cm^3 g^-1 s^-2
+KB_CGS = 1.380649e-16      # erg/K = g cm^2 s^-2 K^-1
+MH_CGS = 1.6735575e-24     # g
+PI = math.pi
+
+PC_TO_CM = 3.085677581e18  # cm
+MSUN_TO_G = 1.98847e33     # g
+
+
+@dataclass(frozen=True)
+class DiskParams:
+    # Black hole mass
+    MBH_g: float = 1.0e7 * MSUN_TO_G
+
+    # Temperature power law: T(R) = T0 * (R/1pc)^(-q)
+    T0_K: float = 100.0
+    q: float = 0.5
+
+    # Surface density power law: Sigma(R) = Sigma0 * (R/1pc)^(-p)
+    Sigma0_g_cm2: float = 1.0e3
+    p: float = 1.0
+
+    # Mean molecular weight
+    mu: float = 2.34
+
+    # Dust internal density (compact; porosity later)
+    rho_s_g_cm3: float = 1.0
+
+
+src/disk.py
+import math
+from typing import Dict
+
+from .params import DiskParams, G_CGS, KB_CGS, MH_CGS, PI, PC_TO_CM
+
+
+def T_of_R(R_cm: float, params: DiskParams) -> float:
+    """Temperature profile in Kelvin."""
+    R_pc = R_cm / PC_TO_CM
+    return params.T0_K * (R_pc ** (-params.q))
+
+
+def cs_of_T(T_K: float, params: DiskParams) -> float:
+    """Isothermal sound speed in cm/s."""
+    return math.sqrt(KB_CGS * T_K / (params.mu * MH_CGS))
+
+
+def OmegaK_of_R(R_cm: float, params: DiskParams) -> float:
+    """Keplerian angular frequency in 1/s."""
+    return math.sqrt(G_CGS * params.MBH_g / (R_cm ** 3))
+
+
+def Hg_of_R(R_cm: float, params: DiskParams) -> float:
+    """Gas scale height in cm."""
+    T_K = T_of_R(R_cm, params)
+    cs = cs_of_T(T_K, params)
+    OmegaK = OmegaK_of_R(R_cm, params)
+    return cs / OmegaK
+
+
+def Sigma_of_R(R_cm: float, params: DiskParams) -> float:
+    """Gas surface density in g/cm^2."""
+    R_pc = R_cm / PC_TO_CM
+    return params.Sigma0_g_cm2 * (R_pc ** (-params.p))
+
+
+def rho_mid_of_R(R_cm: float, params: DiskParams) -> float:
+    """Midplane gas density in g/cm^3, assuming Gaussian vertical profile."""
+    Hg = Hg_of_R(R_cm, params)
+    Sigma = Sigma_of_R(R_cm, params)
+    return Sigma / (math.sqrt(2.0 * PI) * Hg)
+
+
+def disk_state(R_cm: float, params: DiskParams) -> Dict[str, float]:
+    """
+    Convenience bundle of disk quantities at radius R.
+    Returns dict with:
+      T_K, cs_cm_s, OmegaK_s^-1, Hg_cm, Sigma_g_cm2, rho_g_g_cm3
+    """
+    T_K = T_of_R(R_cm, params)
+    cs = cs_of_T(T_K, params)
+    OmegaK = OmegaK_of_R(R_cm, params)
+    Hg = cs / OmegaK
+    Sigma = Sigma_of_R(R_cm, params)
+    rho_g = Sigma / (math.sqrt(2.0 * PI) * Hg)
+
+    return {
+        "T_K": T_K,
+        "cs_cm_s": cs,
+        "OmegaK_s^-1": OmegaK,
+        "Hg_cm": Hg,
+        "Sigma_g_cm2": Sigma,
+        "rho_g_g_cm3": rho_g,
+    }
+
+src/drag.py
+"""
+Epstein drag stopping time + Stokes number.
+
+Epstein regime (good for small grains): ts = (rho_s * a) / (rho_g * cs)
+St = OmegaK * ts
+"""
+
+def stopping_time_epstein(a_cm: float, rho_s_g_cm3: float, rho_g_g_cm3: float, cs_cm_s: float) -> float:
+    """Stopping time in seconds."""
+    if rho_g_g_cm3 <= 0.0 or cs_cm_s <= 0.0:
+        raise ValueError("rho_g and cs must be positive.")
+    return (rho_s_g_cm3 * a_cm) / (rho_g_g_cm3 * cs_cm_s)
+
+
+def stokes_number(OmegaK_s_inv: float, ts_s: float) -> float:
+    """Dimensionless Stokes number."""
+    if OmegaK_s_inv <= 0.0 or ts_s < 0.0:
+        raise ValueError("OmegaK must be positive and ts must be nonnegative.")
+    return OmegaK_s_inv * ts_s
+
+
+
+src/sanity_check.py
+"""
+Sanity checks for Disk Physics + Stokes Number stage.
+Run:
+  python -m src.sanity_check
+"""
+
+from .params import DiskParams, PC_TO_CM
+from .disk import disk_state
+from .drag import stopping_time_epstein, stokes_number
+
+
+def run():
+    params = DiskParams()
+
+    radii_pc = [0.1, 1.0, 10.0]
+    sizes_cm = [1e-4, 1e-1]  # ~1 micron, ~1 mm
+
+    print("=== Disk + Dust Coupling Sanity Check ===")
+    print(f"Using params: {params}")
+    print()
+
+    for R_pc in radii_pc:
+        R_cm = R_pc * PC_TO_CM
+        st = disk_state(R_cm, params)
+
+        print(f"--- R = {R_pc} pc ---")
+        print(f"T = {st['T_K']:.3e} K")
+        print(f"cs = {st['cs_cm_s']:.3e} cm/s")
+        print(f"OmegaK = {st['OmegaK_s^-1']:.3e} 1/s")
+        print(f"Hg = {st['Hg_cm']:.3e} cm")
+        print(f"Sigma = {st['Sigma_g_cm2']:.3e} g/cm^2")
+        print(f"rho_g(mid) = {st['rho_g_g_cm3']:.3e} g/cm^3")
+
+        for a_cm in sizes_cm:
+            ts = stopping_time_epstein(
+                a_cm=a_cm,
+                rho_s_g_cm3=params.rho_s_g_cm3,
+                rho_g_g_cm3=st["rho_g_g_cm3"],
+                cs_cm_s=st["cs_cm_s"],
+            )
+            St = stokes_number(st["OmegaK_s^-1"], ts)
+            print(f"  a={a_cm:.1e} cm -> ts={ts:.3e} s, St={St:.3e}")
+        print()
+
+
+if __name__ == "__main__":
+    run()
+
+src/sanity_check.py
+"""
+Entry point (for now): just runs sanity checks.
+Later, this becomes the MC driver.
+"""
+
+from .sanity_check import run
+
+if __name__ == "__main__":
+    run()
