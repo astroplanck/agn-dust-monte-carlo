@@ -1,0 +1,58 @@
+weights.py
+‘’Gravitational weight”
+FUNCTION gravitational_weight(masses_array):
+    # masses_array: 1D array of length N
+    IF any mass <= 0:
+        RAISE error
+    weights = masses_array^(4/3)
+    RETURN weights
+
+
+“Normalize to probabilities”
+FUNCTION compute_probs(masses_array):
+    weights = gravitational_weight(masses_array)
+    total_weight = SUM(weights)
+    IF total_weight == 0:
+        RAISE error
+    probs = weights / total_weight   # element-wise division
+    RETURN probs
+
+“Sample two distinct indices”
+FUNCTION sample_pair(masses_array):
+    probs = compute_probs(masses_array)
+    N = length(masses_array)
+    # Sample first particle
+    i = RANDOM_CHOICE(0..N-1, probability=probs)  #RANDOM_CHOICE(indices, probability=probs)
+    # Sample second particle
+    REPEAT:
+        j = RANDOM_CHOICE(0..N-1, probability=probs)
+    UNTIL j != i
+    RETURN i, j
+
+mc.py
+IMPORT sample_pair from weights
+FUNCTION monte_carlo_step(particles, disk_state):
+    masses_array = extract masses from particles
+    i, j = sample_pair(masses_array)
+    dv = delta_v_relative(particles[i], particles[j], disk_state)
+    sigma = collision_cross_section(particles[i], particles[j])
+    K = sigma * dv
+    IF collision_occurs(K):
+        merge particles
+
+Sanity checks
+src/sanity_weights.py
+IMPORT sample_pair from weights
+FUNCTION sanity_test_weights():
+    masses = [1, 2, 4, 8, 16]
+    selection_counts = zeros array same length
+    trials = 10000
+    FOR each trial:
+        i, j = sample_pair(masses)
+        selection_counts[i] += 1
+        selection_counts[j] += 1
+    PRINT masses
+    PRINT selection_counts
+    PRINT masses^(4/3)  # expected trend
+
+Run: python -m src.sanity_weights
