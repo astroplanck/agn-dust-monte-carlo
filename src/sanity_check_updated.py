@@ -1,7 +1,7 @@
 import math
-from .params import DiskParams, PC_TO_CM, G_CGS, KB_CGS, MH_CGS, PI
-from .disk import disk_state
-from .drag_updated import stopping_time_epstein, stokes_number, radial_drift_velocity, delta_v_drift
+from params import DiskParams, PC_TO_CM, G_CGS, KB_CGS, MH_CGS, PI
+from disk import disk_state
+from drag_updated import stopping_time_epstein, stokes_number, radial_drift_velocity, delta_v_drift
 
 
 def _eta_and_vK(R_cm: float, params: DiskParams, dlogR: float = 1e-3):
@@ -40,7 +40,8 @@ def run():
     radii_pc = [0.1, 1.0, 10.0]
     sizes_cm = [1e-4, 1e-1]  # ~1 micron, ~1 mm
 
-    print("Disk + Dust Coupling Sanity Check")
+    print("Disk + Dust Coupling Sanity Check:")
+    print(f"Using params: MBH = {params.MBH_g:.3e} g,  T0 = {params.T0_K} K,  q = {params.q},  Sigma0 = {params.Sigma0_g_cm2} g/cm2,  p = {params.p},  mu = {params.mu},  rho_s = {params.rho_s_g_cm3} g/cm3")
     print()
 
     for R_pc in radii_pc:
