@@ -63,3 +63,8 @@ class DiskParams:
 
     # Dust internal density (compact grain material density)
     rho_s_g_cm3: float = 1.0
+
+    # Turbulence
+    reynold: float = 10 ** 10 # Reynold's number
+    alpha: float = 10 ** -3 # Shakura-Sunyaev turbulent velocity parameter
+    y_a: float = 1.6
