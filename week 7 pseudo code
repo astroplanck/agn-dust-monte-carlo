@@ -1,0 +1,186 @@
+1. kernel.py:
+
+collision_cross_section()
+FUNCTION collision_cross_section(particle_i, particle_j):
+
+    a_i = particle_i.radius
+    a_j = particle_j.radius
+
+    sigma_ij = pi * (a_i + a_j)^2
+
+    RETURN sigma_ij
+
+relative_velocity()
+FUNCTION relative_velocity(particle_i, particle_j, disk_state, params):
+
+    m_i = particle_i.mass
+    m_j = particle_j.mass
+
+    St_i = particle_i.St
+    St_j = particle_j.St
+
+    T  = disk_state.T
+    cs = disk_state.cs
+
+    # Brownian contribution
+    v_brownian = brownian_velocity(m_i, m_j, T)
+
+    # Turbulent contribution
+    v_turbulence = turbulent_velocity(St_i, St_j, cs, params.alpha)
+
+    # Drift contribution
+    v_drift_i = radial_drift_velocity(St_i, disk_state)
+    v_drift_j = radial_drift_velocity(St_j, disk_state)
+    v_drift = absolute_value(v_drift_i - v_drift_j)
+
+    v_rel = sqrt(
+        v_brownian^2 +
+        v_turbulence^2 +
+        v_drift^2
+    )
+
+    RETURN v_rel
+
+FUNCTION compute_kernel_factors(particles, disk_state, params):
+
+    f_array = empty array
+    g_array = empty array
+
+    FOR each particle i in particles:
+
+        a_i = particle_i.radius
+        St_i = particle_i.St
+
+        # Example factor based on geometric size
+        f_i = a_i^2
+
+        # Example factor based on particle dynamical state
+        g_i = characteristic_velocity(St_i, disk_state, params)
+
+        append f_i to f_array
+        append g_i to g_array
+
+    RETURN f_array, g_array
+
+
+
+
+2. mc_rates.py:
+
+FUNCTION compute_lambda_i(f_array, g_array):
+
+    sum_g = SUM of all values in g_array
+
+    lambda_array = empty array
+
+    FOR each index i:
+
+        lambda_i = f_array[i] * sum_g
+
+        append lambda_i to lambda_array
+
+    RETURN lambda_array
+
+FUNCTION compute_total_rate(lambda_array):
+
+    Lambda = SUM of all values in lambda_array
+
+    RETURN Lambda
+
+
+
+
+3. mc_timestep.py:
+
+FUNCTION sample_dt(Lambda):
+
+    IF Lambda <= 0:
+        RAISE error
+
+    u = random number uniformly sampled from (0,1)
+
+    dt = -log(u) / Lambda
+
+    RETURN dt
+
+FUNCTION select_particle_i(lambda_array):
+
+    Lambda = SUM of lambda_array
+
+    IF Lambda <= 0:
+        RAISE error
+
+    probs_i = lambda_array / Lambda
+
+    i = RANDOM_CHOICE(indices, probability = probs_i)
+
+    RETURN i
+
+FUNCTION select_particle_j(g_array, i):
+
+    sum_g = SUM of g_array
+
+    IF sum_g <= 0:
+        RAISE error
+
+    probs_j = g_array / sum_g
+
+    REPEAT:
+        j = RANDOM_CHOICE(indices, probability = probs_j)
+    UNTIL j != i
+
+    RETURN j
+
+
+
+
+4. test_mc.py:
+
+FUNCTION test_lambda_positive():
+
+    create small particle list
+
+    compute f_array, g_array
+    compute lambda_array
+
+    CHECK every lambda_i > 0
+
+FUNCTION test_total_rate_positive():
+
+    create small particle list
+
+    compute lambda_array
+    compute Lambda
+
+    CHECK Lambda > 0
+
+FUNCTION test_sample_dt():
+
+    choose Lambda > 0
+
+    dt = sample_dt(Lambda)
+
+    CHECK dt > 0
+
+FUNCTION test_particle_selection():
+
+    create lambda_array
+    create g_array
+
+    i = select_particle_i(lambda_array)
+    j = select_particle_j(g_array, i)
+
+    CHECK i is valid index
+    CHECK j is valid index
+    CHECK i != j
+
+FUNCTION test_sampling_distribution():
+
+    create example lambda_array with one entry much larger than others
+
+    repeat selection of i many times
+
+    CHECK larger lambda entry is selected more often
+
+
+
