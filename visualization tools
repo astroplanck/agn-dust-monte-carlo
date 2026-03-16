@@ -1,0 +1,330 @@
+# io.py
+# Responsible for loading simulation snapshots from disk.
+# All visualization files must use this module to access data.
+
+
+FUNCTION load_snapshot(file_path):
+
+    # Read file from disk (JSON, pickle, etc.)
+    data = read_file(file_path)
+
+    snapshot = {
+        "time": data["time"],
+        "masses": data["masses"],
+        "radii": data["radii"],
+        "stokes": data["stokes"],
+        "stopping_times": data["stopping_times"],
+        "collision_log": data["collision_log"]   # optional
+    }
+
+    RETURN snapshot
+
+
+FUNCTION load_all_snapshots(folder_path):
+
+    file_list = list files in folder_path
+    sort file_list by time
+
+    snapshots = empty list
+
+    FOR each file in file_list:
+        snapshot = load_snapshot(file)
+        append snapshot to snapshots
+
+    RETURN snapshots
+
+
+# viz_distributions.py
+# Responsible for mass distribution plots.
+
+
+FUNCTION plot_mass_distribution(snapshot, bins):
+
+    masses = snapshot["masses"]
+    time = snapshot["time"]
+
+    compute histogram of masses using bins
+
+    create plot
+    set x-axis label = "Mass"
+    set y-axis label = "Number of Particles"
+    set title = "Mass Distribution at time = time"
+
+    RETURN figure
+
+
+FUNCTION compare_mass_distributions(snapshot_list, selected_indices, bins):
+
+    create plot
+
+    FOR each index in selected_indices:
+
+        snapshot = snapshot_list[index]
+        masses = snapshot["masses"]
+        time = snapshot["time"]
+
+        compute histogram of masses using bins
+
+        overlay histogram curve
+        label curve with time
+
+    set x-axis label = "Mass"
+    set y-axis label = "Number of Particles"
+    set title = "Mass Distribution Comparison"
+    add legend
+
+    RETURN figure
+
+
+
+# viz_evolution.py
+# Responsible for time evolution plots.
+
+
+FUNCTION plot_stokes_evolution(snapshot_list):
+
+    times = empty list
+    mean_stokes = empty list
+
+    FOR each snapshot in snapshot_list:
+
+        time = snapshot["time"]
+        stokes_values = snapshot["stokes"]
+
+        compute mean of stokes_values
+
+        append time to times
+        append mean to mean_stokes
+
+    create line plot of mean_stokes vs times
+
+    set x-axis label = "Time"
+    set y-axis label = "Mean Stokes Number"
+    set title = "Stokes Number Evolution"
+
+    RETURN figure
+
+
+FUNCTION plot_stoppingtime_evolution(snapshot_list):
+
+    times = empty list
+    mean_stopping = empty list
+
+    FOR each snapshot in snapshot_list:
+
+        time = snapshot["time"]
+        stopping_values = snapshot["stopping_times"]
+
+        compute mean of stopping_values
+
+        append time
+        append mean
+
+    create line plot of mean_stopping vs times
+
+    set x-axis label = "Time"
+    set y-axis label = "Mean Stopping Time"
+    set title = "Stopping Time Evolution"
+
+    RETURN figure
+
+
+
+
+# viz_collision_stats.py
+# Responsible for collision regime classification and plotting.
+
+
+FUNCTION classify_collision(collision_record):
+
+    v_brown = collision_record["v_brown"]
+    v_turb = collision_record["v_turb"]
+    v_drift = collision_record["v_drift"]
+
+    IF v_brown >= v_turb AND v_brown >= v_drift:
+        RETURN "brownian"
+
+    ELSE IF v_turb >= v_brown AND v_turb >= v_drift:
+        RETURN "turbulence"
+
+    ELSE:
+        RETURN "drift"
+
+
+FUNCTION plot_collision_regime_fractions(snapshot_list, time_bins):
+
+    initialize arrays:
+        fraction_brownian
+        fraction_turbulence
+        fraction_drift
+        time_centers
+
+    FOR each time bin:
+
+        collect all collisions in that bin
+
+        count_brown = 0
+        count_turb = 0
+        count_drift = 0
+
+        FOR each collision in bin:
+
+            regime = classify_collision(collision)
+
+            increment corresponding counter
+
+        total = count_brown + count_turb + count_drift
+
+        compute fractions
+
+        append fractions to arrays
+        append time center
+
+    create line plot:
+        brownian fraction vs time
+        turbulence fraction vs time
+        drift fraction vs time
+
+    set x-axis label = "Time"
+    set y-axis label = "Collision Fraction"
+    set title = "Collision Regime Fractions vs Time"
+    add legend
+
+    RETURN figure
+
+
+
+# viz_trajectories.py
+# Responsible for growth trajectory plots.
+
+
+FUNCTION track_largest_particle(snapshot_list):
+
+    times = empty list
+    largest_masses = empty list
+
+    FOR each snapshot:
+
+        time = snapshot["time"]
+        masses = snapshot["masses"]
+
+        largest = maximum value in masses
+
+        append time
+        append largest
+
+    RETURN times, largest_masses
+
+
+FUNCTION track_median_mass(snapshot_list):
+
+    times = empty list
+    median_masses = empty list
+
+    FOR each snapshot:
+
+        time = snapshot["time"]
+        masses = snapshot["masses"]
+
+        median = median value of masses
+
+        append time
+        append median
+
+    RETURN times, median_masses
+
+
+FUNCTION plot_trajectory(times, values, label):
+
+    create line plot of values vs times
+    set x-axis label = "Time"
+    set y-axis label = label
+    set title = "Growth Trajectory"
+    add legend
+
+    RETURN figure
+
+
+# run_visualizations.py
+# Central script to run all visualization tools.
+
+
+IMPORT load_all_snapshots
+IMPORT all plotting functions
+
+
+FUNCTION main():
+
+    snapshots = load_all_snapshots("output/snapshots")
+
+    # ---- Plot 1: Mass distribution comparison ----
+    total_snapshots = length of snapshots
+
+    selected_indices = evenly spaced 5 indices from 0 to total_snapshots - 1
+
+    fig1 = compare_mass_distributions(snapshots, selected_indices, bins=...)
+
+    save fig1 to "output/figures/mass_comparison.png"
+
+
+    # ---- Plot 2A: Stokes evolution ----
+    fig2 = plot_stokes_evolution(snapshots)
+    save fig2 to "output/figures/stokes_evolution.png"
+
+
+    # ---- Plot 2B: Stopping time evolution ----
+    fig3 = plot_stoppingtime_evolution(snapshots)
+    save fig3 to "output/figures/stopping_time_evolution.png"
+
+
+    # ---- Plot 3: Collision regime fractions ----
+    fig4 = plot_collision_regime_fractions(snapshots, time_bins=...)
+    save fig4 to "output/figures/collision_regimes.png"
+
+
+    # ---- Plot 4: Growth trajectories ----
+    times_l, largest = track_largest_particle(snapshots)
+    times_m, median = track_median_mass(snapshots)
+
+    fig5 = plot_trajectory(times_l, largest, "Largest Mass")
+    overlay median curve
+
+    save fig5 to "output/figures/growth_trajectory.png"
+
+
+# viz_animation.py
+# Responsible for generating GIF or MP4 from snapshots.
+
+
+FUNCTION generate_frames(snapshot_list, output_folder):
+
+    frame_index = 0
+
+    FOR each snapshot in snapshot_list:
+
+        fig = plot_mass_distribution(snapshot, bins=...)
+
+        filename = output_folder + "/frame_" + zero_padded(frame_index) + ".png"
+
+        save fig to filename
+
+        increment frame_index
+
+
+FUNCTION create_gif(frame_folder, output_file):
+
+    read all frame_*.png in sorted order
+
+    combine images into GIF
+
+    save as output_file
+
+
+FUNCTION create_mp4(frame_folder, output_file):
+
+    read all frame_*.png in sorted order
+
+    encode frames into mp4 video
+
+    save as output_file
+
