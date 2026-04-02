@@ -48,17 +48,3 @@ def plot_trajectory(times, values, label):
     ax.legend()
 
     return fig
-
-if __name__ == "__main__":
-    snapshots = [
-        {"time": 0.0, "masses": [1e-12, 2e-12, 3e-12]},
-        {"time": 1.0, "masses": [2e-12, 4e-12, 6e-12]},
-        {"time": 2.0, "masses": [3e-12, 5e-12, 9e-12]},
-    ]
-
-    times_l, largest = track_largest_particle(snapshots)
-    print("times:", times_l)
-    print("largest masses:", largest)
-
-    fig = plot_trajectory(times_l, largest, "Largest Mass")
-    plt.show()
