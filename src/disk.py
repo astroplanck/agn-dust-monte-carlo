@@ -17,7 +17,7 @@
 import math
 from typing import Dict
 
-from .params import DiskParams, G_CGS, KB_CGS, MH_CGS, PI, PC_TO_CM
+from params import DiskParams, G_CGS, KB_CGS, MH_CGS, PI, PC_TO_CM
 
 
 def T_of_R(R_cm: float, params: DiskParams) -> float:

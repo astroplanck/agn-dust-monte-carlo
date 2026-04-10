@@ -1,6 +1,6 @@
-from .params import DiskParams, PC_TO_CM
-from .disk import disk_state
-from .drag import stopping_time_epstein, stokes_number
+from params import DiskParams, PC_TO_CM
+from disk import disk_state
+from drag import stopping_time_epstein, stokes_number
 
 def run():
 
