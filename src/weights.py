@@ -88,6 +88,43 @@ def sample_super_particle_manual(weights, rng=None):
     return idx
 
 
+def gravitational_weight(masses_array):
+    masses_array = np.asarray(masses_array, dtype=float)
+
+    if np.any(masses_array <= 0):
+        raise ValueError("All masses must be positive.")
+
+    return masses_array ** (4 / 3)
+
+
+def compute_probs(masses_array):
+    weights = gravitational_weight(masses_array)
+    total_weight = np.sum(weights)
+
+    if total_weight == 0:
+        raise ValueError("Total weight is zero.")
+
+    return weights / total_weight
+
+
+def sample_pair(masses_array):
+    masses_array = np.asarray(masses_array, dtype=float)
+    N = len(masses_array)
+
+    if N < 2:
+        raise ValueError("Need at least two particles.")
+
+    probs = compute_probs(masses_array)
+
+    i = np.random.choice(N, p=probs)
+
+    while True:
+        j = np.random.choice(N, p=probs)
+        if j != i:
+            break
+
+    return i, j
+
 # A Example
 if __name__ == "__main__":
     n_sp = 10_000
@@ -98,7 +135,7 @@ if __name__ == "__main__":
     m_mean = rng.uniform(1e-18, 1e-15, size=n_sp)
 
     weights = compute_mass_weights(n_real, m_mean)
-    chosen_idx = sample_super_particle(weights, rng=rng)
+    chosen_idx = sample_super_particle_manual(weights, rng=rng)
 
     print("weights sum =", weights.sum())
     print("chosen SP index =", chosen_idx)
