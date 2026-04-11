@@ -1,8 +1,6 @@
 # src/mc_rates.py
 """
 Monte Carlo Collision Rates
-============================
-Week 7 deliverable — Micah Allard
 
 Computes per-particle collision activities λ_i and total rate Λ
 from the separable kernel factors (f, g) produced by kernel.py.

@@ -1,8 +1,6 @@
 # src/kernel.py
 """
 Collision Kernel Physics
-========================
-Week 7 deliverable — Micah Allard
 
 Implements the separable collision kernel K_ij ≈ f_i · g_j.
 

@@ -1,8 +1,6 @@
 # src/mc_timestep.py
 """
 Event-Driven Monte Carlo Timestep
-===================================
-Week 7 deliverable — Micah Allard
 
 Implements the three core functions of the event-driven MC loop:
 
